@@ -1,168 +1,85 @@
-import random
-import datetime
-
-
-class Order:
-    def __init__(self, number=None, products=None, time=None, phone_num=None):
-        self.number = number
-        self.products = products
-        self.time = time
-        self.phone_num = phone_num
-
-    def set_num_time(self, number, time):
-        self.number = number
-        self.time = time
-
-
-class Bot:
+class FoodOrderBot:
     def __init__(self):
-        self.order = None
-        self.orders = []
+        self.state = "StartMenu"
+        self.order_items = []
+        self.phone_number = None
+        self.commands = {
+            "StartMenu": {"старт": self.start_menu},
+            "AddOrder": {"заказ": self.add_order,
+                         "редактировать": self.edit_order,
+                         "завершить": self.finish_order,
+                         "телефон": self.enter_phone_number},
+            "PhoneNumber": {"телефон": self.enter_phone_number}
+        }
 
-        print('Приветствую! Я бот для заказы еды.')
-        self.bot_state = State()
-        self.bot_state.toggle_to_StartMenu()
-        self.bot_state.state.info()
+    def start_menu(self):
+        self.message()
+        self.state = "AddOrder"
+        self.message()
 
-    def chat(self):
-        self.reaction(input('...'))
+    def add_order(self):
+        self.order_items = input("Введите товары через пробел: ").split()
+        if not(self.phone_number in [None, '']):
+            self.message()
+            return
+        self.state = "PhoneNumber"
+        self.message()
 
-    def reaction(self, user):
-        # состояние равно StartMenu
-        if self.bot_state.get_state() == StartMenu(self).get_state(self):
-            if user == self.bot_state.state.commands[0]:
-                self.bot_state.toggle_to_AddingOrder()
-                self.order = self.bot_state.state.add_products()
-            elif user == self.bot_state.state.commands[1]:
-                # self.bot_state.state.show_orders()
-                for order in self.orders:
-                    print('Заказ', order.number, 'от', order.time)
-                    print('Продукты', order.products)
-                    print('Ваш номер:', order.phone_num, '\n')
-            elif user == self.bot_state.state.commands[2]:
-                self.bot_state.state.info()
-            else:
-                print('Сейчас доступны только эти команды:', self.bot_state.state.commands)
+    def edit_order(self):
+        print("Отредактируйте ваш заказ.")
+        print("Товары:", self.order_items)
+        item_to_remove = input("Напишите товар для удаления: ")
+        if item_to_remove in self.order_items:
+            self.order_items.remove(item_to_remove)
+        else:
+            print("Товар не найден.")
+        self.state = "AddOrder"
+        self.message()
 
-        # состояние равно AddingOrder
-        elif self.bot_state.get_state() == AddingOrder(self).get_state(self):
-            if user == self.bot_state.state.commands[0]:
-                self.bot_state.toggle_to_AddingPhNum(self.order)
-                self.order = self.bot_state.state.add_phone()
-            elif user == self.bot_state.state.commands[1]:
-                self.order = self.bot_state.state.add_products()
-            elif user == self.bot_state.state.commands[2]:
-                print('Ваш заказ отменен :(')
-                self.bot_state.toggle_to_StartMenu()
-            else:
-                print('Сейчас доступны только эти команды:', self.bot_state.state.commands)
+    def finish_order(self):
+        if len(self.order_items) != 0 and not(self.phone_number in [None, '']):
+            print("Заказ оформлен.")
+            print("Товары:", self.order_items)
+            if self.phone_number:
+                print("Ваш телефон:", self.phone_number)
 
-        # состояние равно AddingPhNum
-        elif self.bot_state.get_state() == AddingPhNum(self, self.order).get_state(self):
-            if user == self.bot_state.state.commands[0]:
-                print('Ваш заказ принят!')
-                print('Мы вам скоро позвоним :)')
-                time = datetime.datetime.now()
-                number = random.randint(0, 1000)
-                self.order.set_num_time(number, time)
-                self.orders.append(self.order)
-                self.bot_state.toggle_to_StartMenu()
-            elif user == self.bot_state.state.commands[1]:
-                self.order = self.bot_state.state.add_phone()
-            elif user == self.bot_state.state.commands[2]:
-                self.bot_state.toggle_to_AddingOrder()
-                self.order = self.bot_state.state.add_products()
-            elif user == self.bot_state.state.commands[3]:
-                print('Ваш заказ отменен :(')
-                self.bot_state.toggle_to_StartMenu()
-            else:
-                print('Сейчас доступны только эти команды:', self.bot_state.state.commands)
+            self.phone_number = None
+            self.order_items = []
+            self.state = "StartMenu"
 
+        elif len(self.order_items) != 0 and self.phone_number in [None, '']:
+            print("Добавьте номер телефона!")
 
-# класс для управления состоянием
-class State:
-    def __init__(self, order=None):
-        self.state = None
+        elif len(self.order_items) == 0:
+            print("До свидания!")
+            self.state = "StartMenu"
 
-    def get_state(self):
-        return self.state.get_state(self)
+    def enter_phone_number(self):
+        phone = input("Добавьте номер телефона: ").replace(" ", "")
+        self.phone_number = phone
+        self.state = "AddOrder"
+        self.message()
 
-    def toggle_to_StartMenu(self):
-        self.state = StartMenu(self)
+    def process_command(self, command):
+        if self.state == "PhoneNumber" and command.lower() == "назад":
+            self.state = "AddOrder"
+            self.message()
+        else:
+            handler = self.commands[self.state].get(command, lambda: print("Неверная команда"))
+            handler()
 
-    def toggle_to_AddingOrder(self):
-        self.state = AddingOrder(self)
-
-    def toggle_to_AddingPhNum(self, order):
-        self.state = AddingPhNum(self, order)
+    def message(self):
+        if self.state == "StartMenu":
+            print("Приветствую!")
+        elif self.state == "AddOrder":
+            print("Меню: Оформление заказа")
+        elif self.state == "PhoneNumber":
+            print("Меню: Добавление номера")
 
 
-# состояние StartMenu
-class StartMenu:
-    def __init__(self, state):
-        self.state = state
-        self.commands = ['сделать заказ', 'мои заказы', 'инфо']
+# Пример использования:
+bot = FoodOrderBot()
 
-    def info(self):
-        print('Мои команды:', self.commands)
+while True:
+    bot.process_command(input('...'))
 
-    @staticmethod
-    def get_state(self):
-        return 'StartMenu'
-
-
-# состояние AddingOrder
-class AddingOrder:
-    def __init__(self, state):
-        self.state = state
-        self.commands = ['подтвердить', 'редактировать', 'отменить']
-        self.order = Order()
-
-    def add_products(self):
-        print('Введите список продуктов')
-        self.order.products = input('...')
-
-        print('Подтвердите заказ (напишите "подтвердить")')
-        print('Или отредактируйте (напишите "редактировать")')
-        print('Для отмены напишите "отменить"')
-
-        return self.order
-
-    @staticmethod
-    def get_state(self):
-        return 'AddingOrder'
-
-
-# состояние AddingPhNum
-class AddingPhNum:
-    def __init__(self, state, order):
-        self.state = state
-        self.commands = ['подтвердить', 'редактировать', 'назад', 'отменить']
-        self.user_ans = None
-        self.order = order
-
-    def add_phone(self):
-        print('Введите ваш номер телефона')
-        self.order.phone_num = input('...')
-
-        print('Для завершения оформления заказа напишите "подтвердить")')
-        print('Для редактирования номера напишите "редактировать")')
-        print('Для возвращения к редактированию списка продуктов напишите "назад"')
-        print('Для отмены заказа напишите "отменить"')
-
-        return self.order
-
-    @staticmethod
-    def get_state(self):
-        return 'AddingPhNum'
-
-
-def main():
-    bot = Bot()
-    while True:
-        bot.chat()
-        print('state:', bot.bot_state.get_state())
-
-
-if __name__ == '__main__':
-    main()
