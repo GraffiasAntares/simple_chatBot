@@ -77,9 +77,13 @@ class FoodOrderBot:
             print("Меню: Добавление номера")
 
 
-# Пример использования:
-bot = FoodOrderBot()
+def main():
+    bot = FoodOrderBot()
+    while True:
+        bot.process_command(input('...'))
 
-while True:
-    bot.process_command(input('...'))
+
+if __name__ == '__main__':
+    main()
+
 
