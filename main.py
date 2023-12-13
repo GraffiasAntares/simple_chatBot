@@ -9,7 +9,8 @@ class FoodOrderBot:
                          "редактировать": self.edit_order,
                          "завершить": self.finish_order,
                          "телефон": self.enter_phone_number},
-            "PhoneNumber": {"телефон": self.enter_phone_number}
+            "PhoneNumber": {"телефон": self.enter_phone_number,
+                            "назад": self.back}
         }
 
     def start_menu(self):
@@ -60,13 +61,13 @@ class FoodOrderBot:
         self.state = "AddOrder"
         self.message()
 
+    def back(self):
+        self.state = "AddOrder"
+        self.message()
+
     def process_command(self, command):
-        if self.state == "PhoneNumber" and command.lower() == "назад":
-            self.state = "AddOrder"
-            self.message()
-        else:
-            handler = self.commands[self.state].get(command, lambda: print("Неверная команда"))
-            handler()
+        handler = self.commands[self.state].get(command, lambda: print("Неверная команда"))
+        handler()
 
     def message(self):
         if self.state == "StartMenu":
